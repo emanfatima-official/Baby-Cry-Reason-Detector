@@ -1,2 +1,4 @@
-# Baby-s-Cry-Reason-Detector
+# Baby-Cry-Reason-Detector
 Baby’s Cry Reason Detector" is an AI-based system that analyzes a baby’s crying sound to identify the reason behind it — such as hunger, sleep, or pain. The system uses machine learning and audio processing techniques to detect cry patterns.
+Its main goal is to help parents quickly understand and respond to their baby’s needs.
+I collected a dataset of real baby crying sounds along with their causes, labeled the data, and then trained our model for classification. Audio features such as MFCC (Mel-Frequency Cepstral Coefficients), pitch, tone, and energy levels were extracted to understand the emotional and acoustic patterns in the cries. A machine learning model is trained via tensorflow and scikit-learn, to classify the cry types based on these extracted features. The system aims to help parents and caregivers quickly identify why a baby is crying and respond more effectively.
