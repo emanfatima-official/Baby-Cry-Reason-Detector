@@ -7,7 +7,7 @@ import joblib
 import sounddevice as sd
 import tempfile
 import os
-import PortAudio
+from streamlit_webrtc import webrtc_streamer
 
 # -----------------------------------------------------
 # Page Configuration - MUST BE FIRST
