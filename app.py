@@ -7,6 +7,7 @@ import joblib
 import sounddevice as sd
 import tempfile
 import os
+import PortAudio
 
 # -----------------------------------------------------
 # Page Configuration - MUST BE FIRST
