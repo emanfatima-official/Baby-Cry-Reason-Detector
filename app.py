@@ -4,7 +4,6 @@ import librosa
 import noisereduce as nr
 from tensorflow.keras.models import load_model
 import joblib
-import sounddevice as sd
 import tempfile
 import os
 from streamlit_webrtc import webrtc_streamer
