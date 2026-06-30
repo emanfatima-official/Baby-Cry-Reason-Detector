@@ -16,20 +16,17 @@ st.set_page_config(
     page_icon=":material/graphic_eq:",
     layout="centered"
 )
-
-# -----------------------------------------------------
-# Custom CSS - simple, consistent, high-contrast
-# -----------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
 
     .stApp {
-        background-color: #FFFFFF;
+        background: radial-gradient(circle at 15% 0%, #1E1B4B 0%, #0B0B12 38%, #000000 75%);
+        background-attachment: fixed;
     }
 
     #MainMenu, footer, header {visibility: hidden;}
@@ -41,54 +38,58 @@ st.markdown("""
     /* ---------- Layout shell ---------- */
     .block-container {
         max-width: 760px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+        padding-top: 1.4rem;
+        padding-bottom: 2rem;
     }
 
     /* ---------- Header ---------- */
     .bcrd-header {
         text-align: center;
-        padding-bottom: 1.6rem;
-        margin-bottom: 1.8rem;
-        border-bottom: 1px solid #E5E7EB;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
     }
     .bcrd-header h1 {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #111827;
-        margin: 0 0 0.4rem 0;
+        font-size: 2.6rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.35rem 0;
+        background: linear-gradient(90deg, #A5B4FC 0%, #818CF8 35%, #F472B6 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
     .bcrd-header p {
-        font-size: 0.98rem;
-        color: #6B7280;
+        font-size: 0.96rem;
+        color: #9CA3AF;
         margin: 0;
     }
 
     /* ---------- Tabs ---------- */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        border-bottom: 1px solid #E5E7EB;
-        margin-bottom: 0.4rem;
+        gap: 6px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 0.2rem;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 44px;
-        padding: 0 1.3rem;
+        height: 40px;
+        padding: 0 1.2rem;
         font-weight: 600;
-        font-size: 0.95rem;
-        color: #6B7280;
+        font-size: 0.92rem;
+        color: #9CA3AF;
         border-radius: 8px 8px 0 0;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: #F3F4F6;
-        color: #374151;
+        background: rgba(129,140,248,0.10);
+        color: #E5E7EB;
     }
     .stTabs [aria-selected="true"] {
-        color: #4F46E5 !important;
-        background: #EEF2FF;
-        border-bottom: 3px solid #4F46E5 !important;
+        color: #C7D2FE !important;
+        background: linear-gradient(180deg, rgba(129,140,248,0.18) 0%, rgba(129,140,248,0.05) 100%);
+        border-bottom: 3px solid #818CF8 !important;
     }
     .stTabs [data-baseweb="tab-highlight"] {
-        background-color: #4F46E5 !important;
+        background-color: #818CF8 !important;
     }
     .stTabs [data-baseweb="tab-border"] {
         display: none;
@@ -96,41 +97,41 @@ st.markdown("""
 
     /* ---------- Section card ---------- */
     .bcrd-section {
-        background: #F9FAFB;
-        border: 1px solid #E5E7EB;
+        background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        border: 1px solid rgba(255,255,255,0.09);
         border-radius: 10px;
-        padding: 1.4rem 1.5rem;
-        margin: 1.2rem 0;
+        padding: 0.9rem 1.1rem;
+        margin: 0.7rem 0;
     }
     .bcrd-section h3 {
-        font-size: 1.02rem;
+        font-size: 0.95rem;
         font-weight: 600;
-        color: #111827;
-        margin: 0 0 0.7rem 0;
+        color: #F3F4F6;
+        margin: 0 0 0.4rem 0;
     }
     .bcrd-step {
-        font-size: 0.92rem;
-        color: #4B5563;
-        margin: 0.25rem 0;
+        font-size: 0.86rem;
+        color: #A1A1AA;
+        margin: 0.15rem 0;
     }
 
     /* ---------- Recorder card ---------- */
     .bcrd-recorder-card {
-        background: #FFFFFF;
-        border: 1px solid #E5E7EB;
+        background: linear-gradient(160deg, rgba(129,140,248,0.12) 0%, rgba(244,114,182,0.05) 100%);
+        border: 1px solid rgba(129,140,248,0.25);
         border-radius: 10px;
-        padding: 1.6rem;
-        margin: 1rem 0 1.4rem 0;
+        padding: 1.1rem;
+        margin: 0.6rem 0 0.9rem 0;
         text-align: center;
     }
     .bcrd-recorder-label {
-        font-size: 0.92rem;
+        font-size: 0.88rem;
         font-weight: 600;
-        color: #374151;
-        margin-bottom: 0.9rem;
+        color: #E0E7FF;
+        margin-bottom: 0.5rem;
     }
     /* The audio_recorder component renders inside an iframe whose default
-       background is dark - force it transparent so it blends with the card */
+       background is dark by default - force transparent so it blends in */
     iframe {
         background-color: transparent !important;
     }
@@ -143,67 +144,76 @@ st.markdown("""
     /* ---------- Buttons ---------- */
     div.stButton > button {
         width: 100%;
-        background-color: #4F46E5;
+        background: linear-gradient(90deg, #6366F1 0%, #818CF8 100%);
         color: #FFFFFF;
         font-weight: 600;
         border: none;
         border-radius: 8px;
-        padding: 0.65rem 1rem;
-        font-size: 0.95rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.92rem;
     }
     div.stButton > button:hover {
-        background-color: #4338CA;
+        background: linear-gradient(90deg, #4F46E5 0%, #6366F1 100%);
         color: #FFFFFF;
+    }
+
+    /* ---------- File uploader ---------- */
+    [data-testid="stFileUploaderDropzone"] {
+        background: rgba(255,255,255,0.03);
+        border: 1px dashed rgba(255,255,255,0.18);
+    }
+    [data-testid="stFileUploaderDropzone"] * {
+        color: #D1D5DB !important;
     }
 
     /* ---------- Result cards ---------- */
     .bcrd-result {
         border-radius: 10px;
-        padding: 1.3rem 1.5rem;
-        margin: 1.2rem 0 0.8rem 0;
-        border-left: 5px solid;
+        padding: 1rem 1.2rem;
+        margin: 0.8rem 0 0.6rem 0;
+        border-left: 4px solid;
     }
     .bcrd-result-positive {
-        background: #F0FDF4;
-        border-left-color: #16A34A;
+        background: linear-gradient(135deg, rgba(34,197,94,0.14) 0%, rgba(34,197,94,0.04) 100%);
+        border-left-color: #4ADE80;
     }
     .bcrd-result-warning {
-        background: #FFFBEB;
-        border-left-color: #D97706;
+        background: linear-gradient(135deg, rgba(245,158,11,0.14) 0%, rgba(245,158,11,0.04) 100%);
+        border-left-color: #FBBF24;
     }
     .bcrd-result-negative {
-        background: #FEF2F2;
-        border-left-color: #DC2626;
+        background: linear-gradient(135deg, rgba(239,68,68,0.14) 0%, rgba(239,68,68,0.04) 100%);
+        border-left-color: #F87171;
     }
     .bcrd-result-eyebrow {
-        font-size: 0.78rem;
+        font-size: 0.74rem;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.2rem;
     }
-    .bcrd-result-positive .bcrd-result-eyebrow { color: #15803D; }
-    .bcrd-result-warning .bcrd-result-eyebrow { color: #B45309; }
-    .bcrd-result-negative .bcrd-result-eyebrow { color: #B91C1C; }
+    .bcrd-result-positive .bcrd-result-eyebrow { color: #4ADE80; }
+    .bcrd-result-warning .bcrd-result-eyebrow { color: #FBBF24; }
+    .bcrd-result-negative .bcrd-result-eyebrow { color: #F87171; }
 
     .bcrd-result-title {
-        font-size: 1.25rem;
+        font-size: 1.2rem;
         font-weight: 700;
-        color: #111827;
-        margin: 0 0 0.25rem 0;
+        color: #F9FAFB;
+        margin: 0 0 0.2rem 0;
     }
     .bcrd-result-sub {
-        font-size: 0.92rem;
-        color: #4B5563;
+        font-size: 0.88rem;
+        color: #C4C4CC;
         margin: 0;
     }
 
     /* ---------- Confidence bar ---------- */
     .bcrd-confidence-track {
-        background: #E5E7EB;
+        background: rgba(255,255,255,0.10);
         border-radius: 6px;
-        height: 8px;
-        margin-top: 0.8rem;
+        height: 7px;
+        margin-top: 0.6rem;
         overflow: hidden;
     }
     .bcrd-confidence-fill {
@@ -213,64 +223,70 @@ st.markdown("""
 
     /* ---------- Suggestions ---------- */
     .bcrd-suggestions-title {
-        font-size: 0.95rem;
+        font-size: 0.92rem;
         font-weight: 600;
-        color: #111827;
-        margin: 1.4rem 0 0.6rem 0;
+        color: #F3F4F6;
+        margin: 0.9rem 0 0.45rem 0;
     }
     .bcrd-suggestion-item {
         display: flex;
-        gap: 0.6rem;
-        padding: 0.55rem 0;
-        border-bottom: 1px solid #F1F2F4;
-        font-size: 0.92rem;
-        color: #374151;
+        gap: 0.55rem;
+        padding: 0.42rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        font-size: 0.88rem;
+        color: #D1D5DB;
     }
     .bcrd-suggestion-item:last-child {
         border-bottom: none;
     }
     .bcrd-bullet {
-        color: #4F46E5;
+        color: #818CF8;
         font-weight: 700;
     }
 
     /* ---------- Status pill ---------- */
     .bcrd-pill {
         display: inline-block;
-        padding: 0.28rem 0.75rem;
+        padding: 0.24rem 0.7rem;
         border-radius: 20px;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 600;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.4rem;
     }
-    .bcrd-pill-info { background: #EFF6FF; color: #4338CA; }
+    .bcrd-pill-info { background: rgba(129,140,248,0.15); color: #C7D2FE; }
 
     /* ---------- Footer ---------- */
     .bcrd-footer {
         text-align: center;
-        color: #9CA3AF;
-        font-size: 0.82rem;
-        margin-top: 2.4rem;
-        padding-top: 1.2rem;
-        border-top: 1px solid #E5E7EB;
+        color: #6B7280;
+        font-size: 0.8rem;
+        margin-top: 1.6rem;
+        padding-top: 0.9rem;
+        border-top: 1px solid rgba(255,255,255,0.08);
     }
+
+    /* ---------- General text on dark bg ---------- */
+    .stApp, .stApp p, .stApp span, .stApp label, .stApp li {
+        color: #E5E7EB;
+    }
+    .stRadio label, .stMarkdown { color: #E5E7EB; }
+    audio { filter: invert(0.9) hue-rotate(180deg); border-radius: 8px; }
 
     /* ---------- Sidebar ---------- */
     section[data-testid="stSidebar"] {
-        background-color: #111827;
+        background: linear-gradient(180deg, #15131F 0%, #0B0B12 100%);
+        border-right: 1px solid rgba(255,255,255,0.06);
     }
     section[data-testid="stSidebar"] * {
         color: #E5E7EB !important;
     }
     section[data-testid="stSidebar"] hr {
-        border-color: #374151;
+        border-color: rgba(255,255,255,0.08);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# -----------------------------------------------------
-# Load Model and Encoder
-# -----------------------------------------------------
+
 @st.cache_resource
 def load_all():
     try:
