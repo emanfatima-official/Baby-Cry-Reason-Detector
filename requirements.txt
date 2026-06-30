@@ -4,5 +4,5 @@ librosa
 noisereduce
 tensorflow==2.19.0
 joblib
-streamlit-webrtc
+audio-recorder-streamlit
 av
