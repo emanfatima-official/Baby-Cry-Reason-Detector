@@ -258,7 +258,7 @@ st.markdown("""
     /* ---------- Footer ---------- */
     .bcrd-footer {
         text-align: center;
-        color: #6B7280;
+        color: #ffffff;
         font-size: 0.8rem;
         margin-top: 1.6rem;
         padding-top: 0.9rem;
