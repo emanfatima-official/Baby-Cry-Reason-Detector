@@ -66,17 +66,32 @@ st.markdown("""
 
     /* ---------- Tabs ---------- */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0;
+        gap: 8px;
         border-bottom: 1px solid #E5E7EB;
+        margin-bottom: 0.4rem;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 46px;
+        height: 44px;
+        padding: 0 1.3rem;
         font-weight: 600;
+        font-size: 0.95rem;
         color: #6B7280;
+        border-radius: 8px 8px 0 0;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background: #F3F4F6;
+        color: #374151;
     }
     .stTabs [aria-selected="true"] {
-        color: #2563EB !important;
-        border-bottom-color: #2563EB !important;
+        color: #4F46E5 !important;
+        background: #EEF2FF;
+        border-bottom: 3px solid #4F46E5 !important;
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #4F46E5 !important;
+    }
+    .stTabs [data-baseweb="tab-border"] {
+        display: none;
     }
 
     /* ---------- Section card ---------- */
@@ -99,23 +114,36 @@ st.markdown("""
         margin: 0.25rem 0;
     }
 
-    /* ---------- Recorder row ---------- */
-    .bcrd-recorder-row {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        padding: 1.6rem;
+    /* ---------- Recorder card ---------- */
+    .bcrd-recorder-card {
         background: #FFFFFF;
-        border: 1px dashed #D1D5DB;
+        border: 1px solid #E5E7EB;
         border-radius: 10px;
-        margin: 1rem 0;
+        padding: 1.6rem;
+        margin: 1rem 0 1.4rem 0;
+        text-align: center;
+    }
+    .bcrd-recorder-label {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.9rem;
+    }
+    /* The audio_recorder component renders inside an iframe whose default
+       background is dark - force it transparent so it blends with the card */
+    iframe {
+        background-color: transparent !important;
+    }
+    div[data-testid="stIFrame"] {
+        background-color: transparent !important;
+        display: flex;
+        justify-content: center;
     }
 
     /* ---------- Buttons ---------- */
     div.stButton > button {
         width: 100%;
-        background-color: #2563EB;
+        background-color: #4F46E5;
         color: #FFFFFF;
         font-weight: 600;
         border: none;
@@ -124,7 +152,7 @@ st.markdown("""
         font-size: 0.95rem;
     }
     div.stButton > button:hover {
-        background-color: #1D4ED8;
+        background-color: #4338CA;
         color: #FFFFFF;
     }
 
@@ -202,7 +230,7 @@ st.markdown("""
         border-bottom: none;
     }
     .bcrd-bullet {
-        color: #2563EB;
+        color: #4F46E5;
         font-weight: 700;
     }
 
@@ -215,7 +243,7 @@ st.markdown("""
         font-weight: 600;
         margin-bottom: 0.6rem;
     }
-    .bcrd-pill-info { background: #EFF6FF; color: #1D4ED8; }
+    .bcrd-pill-info { background: #EFF6FF; color: #4338CA; }
 
     /* ---------- Footer ---------- */
     .bcrd-footer {
@@ -507,11 +535,12 @@ with tab_record:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="bcrd-recorder-row">', unsafe_allow_html=True)
+    st.markdown('<div class="bcrd-recorder-card">', unsafe_allow_html=True)
+    st.markdown('<div class="bcrd-recorder-label">Tap to Record</div>', unsafe_allow_html=True)
     audio_bytes = audio_recorder(
         text="",
         recording_color="#DC2626",
-        neutral_color="#2563EB",
+        neutral_color="#4F46E5",
         icon_size="3x",
         sample_rate=sample_rate,
     )
