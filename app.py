@@ -6,7 +6,6 @@ from tensorflow.keras.models import load_model
 import joblib
 import tempfile
 import os
-import io
 from audio_recorder_streamlit import audio_recorder
 
 # -----------------------------------------------------
@@ -15,143 +14,228 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(
     page_title="Baby Cry Reason Detector",
     page_icon=":material/graphic_eq:",
-    layout="wide"
+    layout="centered"
 )
 
 # -----------------------------------------------------
-# Custom CSS - colors forced explicitly so theme (light/dark)
-# never causes invisible text
+# Custom CSS - simple, consistent, high-contrast
 # -----------------------------------------------------
 st.markdown("""
 <style>
-    .stApp {
-        background-color: #F4F6FA;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
     }
 
-    .stMarkdown h1 a, .stMarkdown h2 a, .stMarkdown h3 a,
-    .stMarkdown h4 a, .stMarkdown h5 a, .stMarkdown h6 a {
-        visibility: hidden !important;
+    .stApp {
+        background-color: #FFFFFF;
+    }
+
+    #MainMenu, footer, header {visibility: hidden;}
+
+    .stMarkdown h1 a, .stMarkdown h2 a, .stMarkdown h3 a {
         display: none !important;
     }
-    .stMarkdown h1::before, .stMarkdown h2::before, .stMarkdown h3::before,
-    .stMarkdown h4::before, .stMarkdown h5::before, .stMarkdown h6::before {
-        content: none !important;
+
+    /* ---------- Layout shell ---------- */
+    .block-container {
+        max-width: 760px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
     }
 
-    /* Force readable text color on the main app body */
-    .stApp, .stApp p, .stApp span, .stApp label, .stApp li {
-        color: #1F2430;
+    /* ---------- Header ---------- */
+    .bcrd-header {
+        text-align: center;
+        padding-bottom: 1.6rem;
+        margin-bottom: 1.8rem;
+        border-bottom: 1px solid #E5E7EB;
     }
-
-    .bcrd-hero {
-        background: linear-gradient(135deg, #2E3A59 0%, #4A5C8A 100%);
-        padding: 2.2rem 2rem;
-        border-radius: 14px;
-        margin-bottom: 1.6rem;
-    }
-    .bcrd-hero h1 {
-        margin: 0 0 0.4rem 0;
-        font-size: 2.1rem;
+    .bcrd-header h1 {
+        font-size: 1.8rem;
         font-weight: 700;
-        color: #FFFFFF !important;
+        color: #111827;
+        margin: 0 0 0.4rem 0;
     }
-    .bcrd-hero p {
+    .bcrd-header p {
+        font-size: 0.98rem;
+        color: #6B7280;
         margin: 0;
+    }
+
+    /* ---------- Tabs ---------- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 46px;
+        font-weight: 600;
+        color: #6B7280;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #2563EB !important;
+        border-bottom-color: #2563EB !important;
+    }
+
+    /* ---------- Section card ---------- */
+    .bcrd-section {
+        background: #F9FAFB;
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+        padding: 1.4rem 1.5rem;
+        margin: 1.2rem 0;
+    }
+    .bcrd-section h3 {
         font-size: 1.02rem;
-        color: #D6DAEA !important;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.7rem 0;
+    }
+    .bcrd-step {
+        font-size: 0.92rem;
+        color: #4B5563;
+        margin: 0.25rem 0;
     }
 
-    .bcrd-card {
+    /* ---------- Recorder row ---------- */
+    .bcrd-recorder-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 1.6rem;
         background: #FFFFFF;
-        border: 1px solid #E0E3EC;
-        border-radius: 12px;
-        padding: 1.3rem 1.4rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 1px 3px rgba(20,20,40,0.05);
-    }
-    .bcrd-card, .bcrd-card p, .bcrd-card li, .bcrd-card span, .bcrd-card h3 {
-        color: #1F2430 !important;
+        border: 1px dashed #D1D5DB;
+        border-radius: 10px;
+        margin: 1rem 0;
     }
 
-    .bcrd-result-card {
-        border-radius: 12px;
-        padding: 1.5rem 1.6rem;
-        margin-top: 0.6rem;
-        margin-bottom: 1rem;
+    /* ---------- Buttons ---------- */
+    div.stButton > button {
+        width: 100%;
+        background-color: #2563EB;
+        color: #FFFFFF;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        padding: 0.65rem 1rem;
+        font-size: 0.95rem;
+    }
+    div.stButton > button:hover {
+        background-color: #1D4ED8;
+        color: #FFFFFF;
+    }
+
+    /* ---------- Result cards ---------- */
+    .bcrd-result {
+        border-radius: 10px;
+        padding: 1.3rem 1.5rem;
+        margin: 1.2rem 0 0.8rem 0;
+        border-left: 5px solid;
     }
     .bcrd-result-positive {
-        background: #E4F6EA;
-        border: 1px solid #9CD8AE;
+        background: #F0FDF4;
+        border-left-color: #16A34A;
     }
     .bcrd-result-warning {
-        background: #FFF3DC;
-        border: 1px solid #EFC36B;
+        background: #FFFBEB;
+        border-left-color: #D97706;
     }
     .bcrd-result-negative {
-        background: #FBE7E7;
-        border: 1px solid #E8A9A9;
+        background: #FEF2F2;
+        border-left-color: #DC2626;
     }
+    .bcrd-result-eyebrow {
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 0.3rem;
+    }
+    .bcrd-result-positive .bcrd-result-eyebrow { color: #15803D; }
+    .bcrd-result-warning .bcrd-result-eyebrow { color: #B45309; }
+    .bcrd-result-negative .bcrd-result-eyebrow { color: #B91C1C; }
+
     .bcrd-result-title {
         font-size: 1.25rem;
         font-weight: 700;
-        margin-bottom: 0.3rem;
-        color: #1F2430 !important;
+        color: #111827;
+        margin: 0 0 0.25rem 0;
     }
     .bcrd-result-sub {
-        font-size: 0.95rem;
-        color: #41465A !important;
+        font-size: 0.92rem;
+        color: #4B5563;
+        margin: 0;
     }
 
-    .bcrd-suggestion-item {
-        padding: 0.55rem 0.7rem;
-        border-left: 3px solid #4A5C8A;
-        background: #F0F2FA;
-        margin-bottom: 0.45rem;
-        border-radius: 0 6px 6px 0;
-        font-size: 0.95rem;
-        color: #1F2430 !important;
+    /* ---------- Confidence bar ---------- */
+    .bcrd-confidence-track {
+        background: #E5E7EB;
+        border-radius: 6px;
+        height: 8px;
+        margin-top: 0.8rem;
+        overflow: hidden;
+    }
+    .bcrd-confidence-fill {
+        height: 100%;
+        border-radius: 6px;
     }
 
-    .bcrd-status-pill {
-        display: inline-block;
-        padding: 0.3rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
+    /* ---------- Suggestions ---------- */
+    .bcrd-suggestions-title {
+        font-size: 0.95rem;
         font-weight: 600;
+        color: #111827;
+        margin: 1.4rem 0 0.6rem 0;
     }
-    .bcrd-status-recording {
-        background: #FBE7E7;
-        color: #B33A3A !important;
-    }
-    .bcrd-status-stopped {
-        background: #E4F6EA;
-        color: #2E7D44 !important;
-    }
-
-    .bcrd-recorder-wrap {
+    .bcrd-suggestion-item {
         display: flex;
-        align-items: center;
-        gap: 1rem;
-        background: #FFFFFF;
-        border: 1px solid #E0E3EC;
-        border-radius: 12px;
-        padding: 1.2rem 1.4rem;
-        margin-bottom: 1rem;
+        gap: 0.6rem;
+        padding: 0.55rem 0;
+        border-bottom: 1px solid #F1F2F4;
+        font-size: 0.92rem;
+        color: #374151;
+    }
+    .bcrd-suggestion-item:last-child {
+        border-bottom: none;
+    }
+    .bcrd-bullet {
+        color: #2563EB;
+        font-weight: 700;
     }
 
+    /* ---------- Status pill ---------- */
+    .bcrd-pill {
+        display: inline-block;
+        padding: 0.28rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.6rem;
+    }
+    .bcrd-pill-info { background: #EFF6FF; color: #1D4ED8; }
+
+    /* ---------- Footer ---------- */
     .bcrd-footer {
         text-align: center;
-        color: #8A8FA3 !important;
-        font-size: 0.85rem;
-        margin-top: 2rem;
+        color: #9CA3AF;
+        font-size: 0.82rem;
+        margin-top: 2.4rem;
+        padding-top: 1.2rem;
+        border-top: 1px solid #E5E7EB;
     }
 
-    /* Sidebar text */
+    /* ---------- Sidebar ---------- */
     section[data-testid="stSidebar"] {
-        background-color: #1F2430;
+        background-color: #111827;
     }
     section[data-testid="stSidebar"] * {
-        color: #E8E9EF !important;
+        color: #E5E7EB !important;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: #374151;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -183,12 +267,11 @@ with st.sidebar:
 sample_rate = 22050
 
 # -----------------------------------------------------
-# Audio Validation (cry vs random noise / silence)
+# Cry validation - layered checks before trusting the model
 # -----------------------------------------------------
-def is_baby_cry_audio(audio, sr=22050):
-    if audio is None or len(audio) == 0:
-        return False, "No audio captured."
-
+def analyze_audio_characteristics(audio, sr=22050):
+    """Returns a dict of acoustic features used to decide if this is
+    plausibly a baby cry, before the classifier is even trusted."""
     duration = len(audio) / sr
     max_amp = np.max(np.abs(audio))
     rms = np.sqrt(np.mean(audio ** 2))
@@ -196,39 +279,74 @@ def is_baby_cry_audio(audio, sr=22050):
     spec_centroid = np.mean(librosa.feature.spectral_centroid(y=audio, sr=sr))
     spec_flatness = np.mean(librosa.feature.spectral_flatness(y=audio))
 
+    # Pitch / harmonicity: a baby cry is a strongly voiced, tonal sound
+    # with a fundamental typically in the ~250-700 Hz range (higher than
+    # adult speech). Random noise, claps, taps, or silence won't show
+    # a stable pitch in this band.
+    voiced_fraction = 0.0
+    try:
+        f0, voiced_flag, _ = librosa.pyin(
+            audio, sr=sr,
+            fmin=80, fmax=1000,
+            frame_length=2048
+        )
+        if f0 is not None and len(f0) > 0:
+            in_range = voiced_flag & (f0 >= 250) & (f0 <= 750)
+            voiced_fraction = float(np.sum(in_range)) / float(len(f0))
+    except Exception:
+        voiced_fraction = 0.0
+
+    return {
+        "duration": duration,
+        "max_amp": max_amp,
+        "rms": rms,
+        "zcr": zcr,
+        "spec_centroid": spec_centroid,
+        "spec_flatness": spec_flatness,
+        "voiced_fraction": voiced_fraction,
+    }
+
+
+def is_baby_cry_audio(audio, sr=22050):
+    if audio is None or len(audio) == 0:
+        return False, "No audio captured.", None
+
+    feats = analyze_audio_characteristics(audio, sr)
+
     with st.sidebar:
         st.markdown("---")
-        st.markdown("### Last Analysis Diagnostics")
-        st.write(f"Duration: {duration:.2f}s")
-        st.write(f"Max amplitude: {max_amp:.6f}")
-        st.write(f"RMS energy: {rms:.6f}")
-        st.write(f"Zero-crossing rate: {zcr:.4f}")
-        st.write(f"Spectral centroid: {spec_centroid:.1f} Hz")
-        st.write(f"Spectral flatness: {spec_flatness:.4f}")
+        st.markdown("### Diagnostics")
+        st.write(f"Duration: {feats['duration']:.2f}s")
+        st.write(f"RMS energy: {feats['rms']:.6f}")
+        st.write(f"Spectral centroid: {feats['spec_centroid']:.1f} Hz")
+        st.write(f"Spectral flatness: {feats['spec_flatness']:.4f}")
+        st.write(f"Cry-band voiced fraction: {feats['voiced_fraction']:.2%}")
 
-    if rms < 0.0005:
-        return False, "Audio is essentially silent."
-    if max_amp < 0.001:
-        return False, "Audio amplitude too low to analyze."
+    if feats["rms"] < 0.0008:
+        return False, "Audio is essentially silent.", feats
+    if feats["max_amp"] < 0.002:
+        return False, "Audio amplitude too low to analyze.", feats
     if np.std(audio) < 0.0001:
-        return False, "No meaningful variation detected in audio."
+        return False, "No meaningful variation detected in audio.", feats
+    if feats["spec_flatness"] > 0.4:
+        return False, "Sound resembles flat/white noise, not a baby cry.", feats
+    if feats["spec_centroid"] < 150 or feats["spec_centroid"] > 4500:
+        return False, "Sound's frequency profile doesn't match a baby cry.", feats
 
-    # Crying has a fairly narrow, energetic, tonal band - very flat/noisy
-    # spectra (fans, static, white noise, claps) get rejected here.
-    if spec_flatness > 0.45:
-        return False, "Sound looks like flat/white noise, not a baby cry."
-    if spec_centroid < 150 or spec_centroid > 4500:
-        return False, "Sound's frequency profile doesn't match a baby cry."
+    # Core gate: a real cry should show a sustained tonal pitch in the
+    # infant cry band for a meaningful portion of the clip.
+    if feats["voiced_fraction"] < 0.12:
+        return False, "No sustained crying pitch pattern detected.", feats
 
-    return True, "Audio contains sound-like content - proceeding to analysis."
+    return True, "Audio matches expected baby cry characteristics.", feats
 
 # -----------------------------------------------------
 # Prediction Function
 # -----------------------------------------------------
 def predict_audio(audio, sr=22050):
-    is_sound, sound_message = is_baby_cry_audio(audio, sr)
+    is_cry_like, sound_message, feats = is_baby_cry_audio(audio, sr)
 
-    if not is_sound:
+    if not is_cry_like:
         return "No Cry Detected", 0.0, sound_message
 
     audio_processed = audio.astype(np.float32)
@@ -253,32 +371,35 @@ def predict_audio(audio, sr=22050):
         audio_processed = np.pad(audio_processed, (0, pad_length), mode='constant')
 
     mfcc = librosa.feature.mfcc(
-        y=audio_processed,
-        sr=sr,
-        n_mfcc=40,
-        n_fft=2048,
-        hop_length=512
+        y=audio_processed, sr=sr, n_mfcc=40, n_fft=2048, hop_length=512
     )
     mfcc = np.mean(mfcc.T, axis=0).reshape(1, -1)
 
     pred = model.predict(mfcc, verbose=0)
-    reason = le.classes_[np.argmax(pred)]
-    confidence = np.max(pred)
+    probs = pred[0]
+    sorted_idx = np.argsort(probs)[::-1]
+    top_idx, second_idx = sorted_idx[0], sorted_idx[1]
+    confidence = probs[top_idx]
+    margin = probs[top_idx] - probs[second_idx]
+    reason = le.classes_[top_idx]
 
     with st.sidebar:
         st.markdown("### Prediction Probabilities")
         for i, class_name in enumerate(le.classes_):
-            st.write(f"{class_name}: {pred[0][i] * 100:.1f}%")
+            st.write(f"{class_name}: {probs[i] * 100:.1f}%")
+        st.write(f"Margin (top vs runner-up): {margin * 100:.1f}%")
 
-    if confidence < 0.35:
-        return "No Cry Detected", confidence, "Sound detected but it does not resemble a baby cry pattern."
+    # Reject low-confidence or ambiguous predictions instead of forcing
+    # a label - this is what was causing random sounds to be mislabeled.
+    if confidence < 0.45 or margin < 0.12:
+        return "No Cry Detected", confidence, "Audio had cry-like qualities but the model could not confidently match a reason."
 
     return reason, confidence, "Analysis completed."
 
 # -----------------------------------------------------
 # Suggestions
 # -----------------------------------------------------
-def get_suggestions(reason, confidence):
+def get_suggestions(reason):
     suggestions = {
         "Hungry": [
             "Check feeding schedule - baby might be due for a feed.",
@@ -315,13 +436,12 @@ def get_suggestions(reason, confidence):
 # Show Results Helper
 # -----------------------------------------------------
 def show_results(reason, confidence, message):
-    st.markdown("### Analysis Results")
-
     if reason == "No Cry Detected":
         st.markdown(f"""
-        <div class="bcrd-result-card bcrd-result-negative">
+        <div class="bcrd-result bcrd-result-negative">
+            <div class="bcrd-result-eyebrow">Result</div>
             <div class="bcrd-result-title">No Cry Detected</div>
-            <div class="bcrd-result-sub">{message}</div>
+            <p class="bcrd-result-sub">{message}</p>
         </div>
         """, unsafe_allow_html=True)
         with st.expander("Troubleshooting tips"):
@@ -331,31 +451,40 @@ def show_results(reason, confidence, message):
             st.write("- Try uploading a WAV file instead of live recording.")
     else:
         if confidence < 0.6:
-            st.markdown(f"""
-            <div class="bcrd-result-card bcrd-result-warning">
-                <div class="bcrd-result-title">Possible Reason: {reason}</div>
-                <div class="bcrd-result-sub">Confidence: {confidence * 100:.1f}% (low confidence - try a clearer recording)</div>
-            </div>
-            """, unsafe_allow_html=True)
+            css_class = "bcrd-result-warning"
+            eyebrow = "Low Confidence"
+            bar_color = "#D97706"
         else:
-            st.markdown(f"""
-            <div class="bcrd-result-card bcrd-result-positive">
-                <div class="bcrd-result-title">Baby Cry Detected: {reason}</div>
-                <div class="bcrd-result-sub">Confidence: {confidence * 100:.1f}%</div>
-            </div>
-            """, unsafe_allow_html=True)
+            css_class = "bcrd-result-positive"
+            eyebrow = "Baby Cry Detected"
+            bar_color = "#16A34A"
 
-    st.markdown("### Suggestions & Next Steps")
-    for s in get_suggestions(reason, confidence):
-        st.markdown(f'<div class="bcrd-suggestion-item">{s}</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="bcrd-result {css_class}">
+            <div class="bcrd-result-eyebrow">{eyebrow}</div>
+            <div class="bcrd-result-title">{reason}</div>
+            <p class="bcrd-result-sub">Confidence: {confidence * 100:.1f}%</p>
+            <div class="bcrd-confidence-track">
+                <div class="bcrd-confidence-fill" style="width:{confidence * 100:.1f}%; background:{bar_color};"></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown('<div class="bcrd-suggestions-title">Suggestions & Next Steps</div>', unsafe_allow_html=True)
+    for s in get_suggestions(reason):
+        st.markdown(f"""
+        <div class="bcrd-suggestion-item">
+            <span class="bcrd-bullet">&#8226;</span><span>{s}</span>
+        </div>
+        """, unsafe_allow_html=True)
 
 # -----------------------------------------------------
 # Header
 # -----------------------------------------------------
 st.markdown("""
-<div class="bcrd-hero">
+<div class="bcrd-header">
     <h1>Baby Cry Reason Detector</h1>
-    <p>Record or upload a baby's cry to identify the likely reason - hungry, tired, or uncomfortable.</p>
+    <p>Record or upload audio to identify the likely reason a baby is crying.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -363,31 +492,27 @@ if model is None or le is None:
     st.error("Model files not loaded. Please ensure 'baby_cry_reason_model.h5' and 'label_encoder.pkl' are in the same directory.")
     st.stop()
 
-option = st.radio(
-    "Choose input method:",
-    ["Record via Microphone (Browser)", "Upload Audio File"],
-    horizontal=True
-)
-
-st.markdown("<br>", unsafe_allow_html=True)
+tab_record, tab_upload = st.tabs(["Record Audio", "Upload File"])
 
 # -----------------------------------------------------
-# Record Section - simple click-to-record/stop widget
+# Record Tab
 # -----------------------------------------------------
-if option == "Record via Microphone (Browser)":
-    st.markdown('<div class="bcrd-card">', unsafe_allow_html=True)
-    st.subheader("Record Audio")
-    st.write("1. Click the microphone icon below to start recording.")
-    st.write("2. Let the baby cry for a few seconds.")
-    st.write("3. Click the icon again to stop - analysis runs automatically.")
-    st.markdown('</div>', unsafe_allow_html=True)
+with tab_record:
+    st.markdown("""
+    <div class="bcrd-section">
+        <h3>How to record</h3>
+        <p class="bcrd-step">1. Click the microphone icon below to start recording.</p>
+        <p class="bcrd-step">2. Let the baby cry for at least 3-5 seconds.</p>
+        <p class="bcrd-step">3. Click the icon again to stop - analysis runs automatically.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown('<div class="bcrd-recorder-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="bcrd-recorder-row">', unsafe_allow_html=True)
     audio_bytes = audio_recorder(
-        text="Click to record",
-        recording_color="#B33A3A",
-        neutral_color="#4A5C8A",
-        icon_size="2x",
+        text="",
+        recording_color="#DC2626",
+        neutral_color="#2563EB",
+        icon_size="3x",
         sample_rate=sample_rate,
     )
     st.markdown('</div>', unsafe_allow_html=True)
@@ -395,7 +520,6 @@ if option == "Record via Microphone (Browser)":
     if audio_bytes:
         st.audio(audio_bytes, format="audio/wav")
 
-        # Avoid re-analyzing the same clip on every rerun
         if st.session_state.get("bcrd_last_audio_bytes") != audio_bytes:
             st.session_state["bcrd_last_audio_bytes"] = audio_bytes
 
@@ -416,15 +540,21 @@ if option == "Record via Microphone (Browser)":
         if st.session_state.get("bcrd_last_result"):
             reason, confidence, message = st.session_state["bcrd_last_result"]
             show_results(reason, confidence, message)
+    else:
+        st.markdown('<span class="bcrd-pill bcrd-pill-info">Waiting for recording</span>', unsafe_allow_html=True)
 
 # -----------------------------------------------------
-# Upload Section
+# Upload Tab
 # -----------------------------------------------------
-elif option == "Upload Audio File":
-    st.markdown('<div class="bcrd-card">', unsafe_allow_html=True)
-    st.subheader("Upload Audio File")
-    uploaded_file = st.file_uploader("Choose a WAV file containing baby crying", type=["wav"])
-    st.markdown('</div>', unsafe_allow_html=True)
+with tab_upload:
+    st.markdown("""
+    <div class="bcrd-section">
+        <h3>Upload a WAV file</h3>
+        <p class="bcrd-step">Choose a clear recording of a baby crying for best results.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    uploaded_file = st.file_uploader("Select WAV file", type=["wav"], label_visibility="collapsed")
 
     if uploaded_file is not None:
         st.audio(uploaded_file, format="audio/wav")
@@ -440,7 +570,6 @@ elif option == "Upload Audio File":
                     reason, confidence, message = predict_audio(audio, sr)
                     show_results(reason, confidence, message)
                     os.unlink(tmp_path)
-
                 except Exception as e:
                     st.error(f"Error processing file: {e}")
 
