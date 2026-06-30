@@ -6,9 +6,8 @@ from tensorflow.keras.models import load_model
 import joblib
 import tempfile
 import os
-import queue
-import av
-from streamlit_webrtc import webrtc_streamer, WebRtcMode
+import io
+from audio_recorder_streamlit import audio_recorder
 
 # -----------------------------------------------------
 # Page Configuration - MUST BE FIRST
@@ -20,10 +19,15 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------
-# Custom CSS
+# Custom CSS - colors forced explicitly so theme (light/dark)
+# never causes invisible text
 # -----------------------------------------------------
 st.markdown("""
 <style>
+    .stApp {
+        background-color: #F4F6FA;
+    }
+
     .stMarkdown h1 a, .stMarkdown h2 a, .stMarkdown h3 a,
     .stMarkdown h4 a, .stMarkdown h5 a, .stMarkdown h6 a {
         visibility: hidden !important;
@@ -34,32 +38,39 @@ st.markdown("""
         content: none !important;
     }
 
+    /* Force readable text color on the main app body */
+    .stApp, .stApp p, .stApp span, .stApp label, .stApp li {
+        color: #1F2430;
+    }
+
     .bcrd-hero {
         background: linear-gradient(135deg, #2E3A59 0%, #4A5C8A 100%);
         padding: 2.2rem 2rem;
         border-radius: 14px;
         margin-bottom: 1.6rem;
-        color: #F5F6FA;
     }
     .bcrd-hero h1 {
         margin: 0 0 0.4rem 0;
         font-size: 2.1rem;
         font-weight: 700;
-        color: #FFFFFF;
+        color: #FFFFFF !important;
     }
     .bcrd-hero p {
         margin: 0;
         font-size: 1.02rem;
-        color: #D6DAEA;
+        color: #D6DAEA !important;
     }
 
     .bcrd-card {
         background: #FFFFFF;
-        border: 1px solid #E4E6EE;
+        border: 1px solid #E0E3EC;
         border-radius: 12px;
         padding: 1.3rem 1.4rem;
         margin-bottom: 1rem;
-        box-shadow: 0 1px 3px rgba(20,20,40,0.04);
+        box-shadow: 0 1px 3px rgba(20,20,40,0.05);
+    }
+    .bcrd-card, .bcrd-card p, .bcrd-card li, .bcrd-card span, .bcrd-card h3 {
+        color: #1F2430 !important;
     }
 
     .bcrd-result-card {
@@ -69,34 +80,36 @@ st.markdown("""
         margin-bottom: 1rem;
     }
     .bcrd-result-positive {
-        background: #EAF7EE;
-        border: 1px solid #B9E4C4;
+        background: #E4F6EA;
+        border: 1px solid #9CD8AE;
     }
     .bcrd-result-warning {
-        background: #FFF6E6;
-        border: 1px solid #F3D9A0;
+        background: #FFF3DC;
+        border: 1px solid #EFC36B;
     }
     .bcrd-result-negative {
-        background: #FBEAEA;
-        border: 1px solid #F0BFBF;
+        background: #FBE7E7;
+        border: 1px solid #E8A9A9;
     }
     .bcrd-result-title {
         font-size: 1.25rem;
         font-weight: 700;
         margin-bottom: 0.3rem;
+        color: #1F2430 !important;
     }
     .bcrd-result-sub {
         font-size: 0.95rem;
-        color: #4A4A4A;
+        color: #41465A !important;
     }
 
     .bcrd-suggestion-item {
         padding: 0.55rem 0.7rem;
         border-left: 3px solid #4A5C8A;
-        background: #F7F8FC;
+        background: #F0F2FA;
         margin-bottom: 0.45rem;
         border-radius: 0 6px 6px 0;
         font-size: 0.95rem;
+        color: #1F2430 !important;
     }
 
     .bcrd-status-pill {
@@ -107,19 +120,38 @@ st.markdown("""
         font-weight: 600;
     }
     .bcrd-status-recording {
-        background: #FBEAEA;
-        color: #B33A3A;
+        background: #FBE7E7;
+        color: #B33A3A !important;
     }
     .bcrd-status-stopped {
-        background: #EAF7EE;
-        color: #2E7D44;
+        background: #E4F6EA;
+        color: #2E7D44 !important;
+    }
+
+    .bcrd-recorder-wrap {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: #FFFFFF;
+        border: 1px solid #E0E3EC;
+        border-radius: 12px;
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 1rem;
     }
 
     .bcrd-footer {
         text-align: center;
-        color: #8A8A8A;
+        color: #8A8FA3 !important;
         font-size: 0.85rem;
         margin-top: 2rem;
+    }
+
+    /* Sidebar text */
+    section[data-testid="stSidebar"] {
+        background-color: #1F2430;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #E8E9EF !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -181,7 +213,7 @@ def is_baby_cry_audio(audio, sr=22050):
     if np.std(audio) < 0.0001:
         return False, "No meaningful variation detected in audio."
 
-    # Crying has a fairly narrow, energetic, tonal band — very flat/noisy
+    # Crying has a fairly narrow, energetic, tonal band - very flat/noisy
     # spectra (fans, static, white noise, claps) get rejected here.
     if spec_flatness > 0.45:
         return False, "Sound looks like flat/white noise, not a baby cry."
@@ -323,7 +355,7 @@ def show_results(reason, confidence, message):
 st.markdown("""
 <div class="bcrd-hero">
     <h1>Baby Cry Reason Detector</h1>
-    <p>Record or upload a baby's cry to identify the likely reason — hungry, tired, or uncomfortable.</p>
+    <p>Record or upload a baby's cry to identify the likely reason - hungry, tired, or uncomfortable.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -340,63 +372,50 @@ option = st.radio(
 st.markdown("<br>", unsafe_allow_html=True)
 
 # -----------------------------------------------------
-# Record Section - WebRTC Browser Mic
+# Record Section - simple click-to-record/stop widget
 # -----------------------------------------------------
 if option == "Record via Microphone (Browser)":
     st.markdown('<div class="bcrd-card">', unsafe_allow_html=True)
     st.subheader("Record Audio")
-    st.write("1. Click **START** to allow microphone access.")
+    st.write("1. Click the microphone icon below to start recording.")
     st.write("2. Let the baby cry for a few seconds.")
-    st.write("3. Click **STOP** when done.")
-    st.write("4. Click **Analyze Recorded Audio** to get results.")
+    st.write("3. Click the icon again to stop - analysis runs automatically.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    ctx = webrtc_streamer(
-        key="baby-cry-recorder",
-        mode=WebRtcMode.SENDONLY,
-        audio_receiver_size=1024,
-        media_stream_constraints={"audio": True, "video": False},
-        async_processing=True,
+    st.markdown('<div class="bcrd-recorder-wrap">', unsafe_allow_html=True)
+    audio_bytes = audio_recorder(
+        text="Click to record",
+        recording_color="#B33A3A",
+        neutral_color="#4A5C8A",
+        icon_size="2x",
+        sample_rate=sample_rate,
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Reset the frame buffer whenever a fresh recording session starts.
-    if ctx.state.playing and not st.session_state.get("bcrd_was_playing", False):
-        st.session_state["bcrd_audio_frames"] = []
-    st.session_state["bcrd_was_playing"] = ctx.state.playing
+    if audio_bytes:
+        st.audio(audio_bytes, format="audio/wav")
 
-    if ctx.audio_receiver and ctx.state.playing:
-        st.markdown('<span class="bcrd-status-pill bcrd-status-recording">Recording in progress...</span>', unsafe_allow_html=True)
-        if "bcrd_audio_frames" not in st.session_state:
-            st.session_state["bcrd_audio_frames"] = []
+        # Avoid re-analyzing the same clip on every rerun
+        if st.session_state.get("bcrd_last_audio_bytes") != audio_bytes:
+            st.session_state["bcrd_last_audio_bytes"] = audio_bytes
 
-        # Keep pulling frames while the stream is active. This loop exits
-        # naturally once the user clicks STOP (ctx.state.playing becomes False).
-        while ctx.state.playing:
-            try:
-                audio_frames = ctx.audio_receiver.get_frames(timeout=1)
-            except queue.Empty:
-                continue
-            for frame in audio_frames:
-                arr = frame.to_ndarray()
-                if arr.ndim > 1:
-                    arr = arr.mean(axis=0)
-                st.session_state["bcrd_audio_frames"].append(arr.astype(np.float32))
+            with st.spinner("Analyzing audio..."):
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                        tmp.write(audio_bytes)
+                        tmp_path = tmp.name
 
-        if st.session_state["bcrd_audio_frames"]:
-            st.session_state["recorded_audio"] = np.concatenate(st.session_state["bcrd_audio_frames"])
+                    audio, sr = librosa.load(tmp_path, sr=sample_rate, mono=True)
+                    reason, confidence, message = predict_audio(audio, sr)
+                    st.session_state["bcrd_last_result"] = (reason, confidence, message)
+                    os.unlink(tmp_path)
+                except Exception as e:
+                    st.session_state["bcrd_last_result"] = None
+                    st.error(f"Error processing recording: {e}")
 
-    if "recorded_audio" in st.session_state and not ctx.state.playing:
-        st.markdown('<span class="bcrd-status-pill bcrd-status-stopped">Recording captured - ready to analyze</span>', unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Analyze Recorded Audio", type="primary", use_container_width=True):
-            audio_data = st.session_state["recorded_audio"]
-            if len(audio_data) > 0:
-                audio_resampled = librosa.resample(audio_data, orig_sr=48000, target_sr=sample_rate)
-                with st.spinner("Analyzing audio..."):
-                    reason, confidence, message = predict_audio(audio_resampled, sample_rate)
-                show_results(reason, confidence, message)
-            else:
-                st.error("No audio was captured. Please try recording again.")
+        if st.session_state.get("bcrd_last_result"):
+            reason, confidence, message = st.session_state["bcrd_last_result"]
+            show_results(reason, confidence, message)
 
 # -----------------------------------------------------
 # Upload Section
